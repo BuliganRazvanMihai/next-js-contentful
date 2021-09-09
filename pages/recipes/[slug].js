@@ -3,60 +3,73 @@ import Image from 'next/image';
 import { documentToReactComponents } from '@contentful/rich-text-react-renderer'
 
 const client = createClient({
-  space: process.env.CONTENTFUL_SPACE_ID,
-  accessToken: process.env.CONTENTFUL_ACCESS_KEY,
+  space: "wthdjo8g8lwq",
+  accessToken: "lIUMWRZnH9SQkByefiXrJFbtxmXkJJNpgh82WcTUD1k",
 })
 
 export const getStaticPaths = async () => {
-  const res = await client.getEntries({
-    content_type: 'recipe'
+  const res = await client.getEntries({ 
+    content_type: "recipe" 
   })
 
   const paths = res.items.map(item => {
     return {
-      params: { slug: item.fields.slug},
-      revalidate: 1
+      params: { slug: item.fields.slug }
     }
   })
 
   return {
-    paths: paths,
-    fallback: false
+    paths,
+    fallback: true
   }
 }
 
-export async function getStaticProps({ params }) {
-  const res = await client.getEntries({
+export const getStaticProps = async ({ params }) => {
+  const { items } = await client.getEntries({
     content_type: 'recipe',
     'fields.slug': params.slug
-  })
+  }) 
+
+  if (!items.length) {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false,
+      },
+    }
+  }
 
   return {
-    props: { recipe: res.items[0] }
+    props: { recipe: items[0] },
+    revalidate: 1
   }
 }
 
 export default function RecipeDetails({ recipe }) {
-  const { featuredImage, title, cookingTime, ingredients, method} = recipe.fields
+  if (!recipe) return <Skeleton />
+
+  const { featuredImage, title, cookingTime, ingredients, method } = recipe.fields
+
   return (
     <div>
       <div className="banner">
         <Image 
-          src= {'https:' + featuredImage.fields.file.url}
-          width = {featuredImage.fields.file.details.image.width}
-          height = {featuredImage.fields.file.details.image.height}
+          src={'https:' + featuredImage.fields.file.url}
+          width={featuredImage.fields.file.details.image.width}
+          height={featuredImage.fields.file.details.image.height}
         />
         <h2>{ title }</h2>
       </div>
+
       <div className="info">
-        <p>Take about { cookingTime} mins to cook</p>
-        <h3>Ingrediets:</h3>
+        <p>Takes about { cookingTime } mins to cook.</p>
+        <h3>Ingredients:</h3>
 
         {ingredients.map(ing => (
-          <span key={ing}>{ing}</span>
+          <span key={ing}>{ ing }</span>
         ))}
       </div>
-
+        
       <div className="method">
         <h3>Method:</h3>
         <div>{documentToReactComponents(method)}</div>
